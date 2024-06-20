@@ -2,8 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {EthBank} from "../src/ReentrancyEthBank.sol";
-import {EthBankExploit} from "../src/ReentrancyExploit.sol";
+import {EthBank,EthBankExploit} from "../src/Reentrancy.sol";
 
 contract EthBankExploitTest is Test {
     address private constant alice = address(1);
