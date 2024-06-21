@@ -15,6 +15,7 @@
 - [Outdated compiler version](#outdated-compiler)
 - [Bypass contract size Attack](#bypass-contract-size)
 - [Logical Issues](#logical-issues)
+- [Use of Deprecated Solidity Functions](#deprecated-fns)
 - [Hiding Malicious code in external contract](#external-contract)
 
 ## <font color="yellow">Typographical Error <a id="typography"></a></font>
@@ -409,3 +410,19 @@ constructor() public {
 
 ### Description
 *Some of the above issues are more specific to smart contracts, others are common to all types of programming. By far the most common type of issue we detect consists of simple mistakes in the logic of the smart contract. These errors may be the result of a simple typo, a misunderstanding of the specification, or a larger programming mistake. These tend to have severe implications on the security and functionality of the smart contract.What they all have in common though, is the fact that they can only be detected if the auditor understands the code base completely and has an insight into the project’s intended functionality and the contract’s specification. It is these types of issues that are the reason smart contract audits take time, are not cheap, and require highly experienced auditors.*
+
+
+## <font color="yellow">Use of Deprecated Solidity Functions <a id="deprecated-fns"></a></font>
+
+### Description
+*Several functions and operators in Solidity are deprecated. Using them leads to reduced code quality. With new major versions of the Solidity compiler, deprecated functions and operators may result in side effects and compile errors.*
+
+## Remediation
+always use updated functions and methods in building your contracts. examples of some deprecated functions and their corresponding upgrades
+| Deprecated      | Updated |
+| ----------- | ----------- |
+| suicide(address)      | selfdestruct(address)       |
+| constant      | view       |
+| throw     | revert()       |
+| callcode(...)      | delegatecall(...)      |
+
