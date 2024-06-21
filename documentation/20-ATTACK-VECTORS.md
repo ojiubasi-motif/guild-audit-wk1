@@ -1,8 +1,20 @@
 # 20 ATTACK VECTORS
 - [Typographical Error](#typography)
 - [Re-Entrancy Attack](#reentrancy)
-- [Center](#center)
-- [Color](#color)
+- [Unexpected ETH balance](#unexpectedEthBal)
+- [Frontrunning Attack](#frontrunning)
+- [DoS Attack](#dos)
+- [Malicious use of SelfDestruct](#selfdestruct)
+- [Shadowing state variables](#shadow)
+- [Delegate call Attack](#delegatecall)
+- [Randomness manipulation](#randomness)
+- [Signature Replay Attack](#signature)
+- [Tx.Origin Attack](#txorigin)
+- [Accessing Private variables](#private-variables)
+- [Floating Pragma](#floating-pragma)
+- [Outdated compiler version](#outdated-compiler)
+- [Bypass contract size Attack](#bypass-contract-size)
+- [Hiding Malicious code in external contract](#external-contract)
 
 ## <font color="yellow">Typographical Error <a id="typography"></a></font>
 
@@ -20,6 +32,7 @@ The weakness can be avoided in two ways; 1)by performing pre-condition checks on
 
 ## <font color="yellow">Re-Entrancy Attack <a id="reentrancy"></a></font> 
 
+
 ### Description
 *one major danger of calling external contracts is that they can take over the control flow as described thus: Let's say that contract A calls contract B.*
 
@@ -27,85 +40,214 @@ The weakness can be avoided in two ways; 1)by performing pre-condition checks on
 
 ### Code sample
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+## <font color="yellow"> Unexpected ETH balance <a id="unexpectedEthBal"></a></font>
 
-/*
-EtherStore is a contract where you can deposit and withdraw ETH.
-This contract is vulnerable to re-entrancy attack.
-Let's see why.
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
 
-1. Deploy EtherStore
-2. Deposit 1 Ether each from Account 1 (Alice) and Account 2 (Bob) into EtherStore
-3. Deploy Attack with address of EtherStore
-4. Call Attack.attack sending 1 ether (using Account 3 (Eve)).
-   You will get 3 Ethers back (2 Ether stolen from Alice and Bob,
-   plus 1 Ether sent from this contract).
+### Code sample
 
-What happened?
-Attack was able to call EtherStore.withdraw multiple times before
-EtherStore.withdraw finished executing.
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
 
-Here is how the functions were called
-- Attack.attack
-- EtherStore.deposit
-- EtherStore.withdraw
-- Attack fallback (receives 1 Ether)
-- EtherStore.withdraw
-- Attack.fallback (receives 1 Ether)
-- EtherStore.withdraw
-- Attack fallback (receives 1 Ether)
-*/
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
 
-contract EtherStore {
-    mapping(address => uint256) public balances;
+## <font color="yellow">Frontrunning Attack <a id="frontrunning"></a></font>
 
-    function deposit() public payable {
-        balances[msg.sender] += msg.value;
-    }
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
 
-    function withdraw() public {
-        uint256 bal = balances[msg.sender];
-        require(bal > 0);
+### Code sample
 
-        (bool sent,) = msg.sender.call{value: bal}("");
-        require(sent, "Failed to send Ether");
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
 
-        balances[msg.sender] = 0;
-    }
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
 
-    // Helper function to check the balance of this contract
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
-}
+## <font color="yellow">DoS Attack <a id="dos"></a>dos</font>
 
-contract Attack {
-    EtherStore public etherStore;
-    uint256 public constant AMOUNT = 1 ether;
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
 
-    constructor(address _etherStoreAddress) {
-        etherStore = EtherStore(_etherStoreAddress);
-    }
+### Code sample
 
-    // Fallback is called when EtherStore sends Ether to this contract.
-    fallback() external payable {
-        if (address(etherStore).balance >= AMOUNT) {
-            etherStore.withdraw();
-        }
-    }
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
 
-    function attack() external payable {
-        require(msg.value >= AMOUNT);
-        etherStore.deposit{value: AMOUNT}();
-        etherStore.withdraw();
-    }
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
 
-    // Helper function to check the balance of this contract
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
-}
 
-```
+## <font color="yellow">Malicious use of SelfDestruct<a id="selfdestruct"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+
+## <font color="yellow">Shadowing state variables <a id="shadow"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Delegate call Attack <a id="delegatecall"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Randomness manipulation<a id="randomness"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Signature Replay Attack <a id="signature"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Tx.Origin Attack<a id="txorigin"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Accessing Private variables<a id="private-variables"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Floating Pragma <a id="floating-pragma"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Outdated compiler version <a id="outdated-compiler"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Bypass contract size Attack<a id="bypass-contract-size"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Hiding Malicious code in external contract <a id="external-contract"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version
+
+## <font color="yellow">Outdated compiler version <a id="outdated-compiler"></a></font>
+
+### Description
+*A typographical error can occur **for example** when the intent of a defined operation is to sum a number to a variable (+=) but it has accidentally been defined in a wrong way (=+), introducing a typo which happens to be a valid operator. Instead of calculating the sum it initializes the variable again.*
+
+### Code sample
+
+- [Vulnerable contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyEthBank.sol)
+- [Attack contract](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/src/ReentrancyExploit.sol)
+- [Test attack](https://github.com/ojiubasi-motif/guild-audit-wk1/blob/master/test/reentrancy.t.sol)
+
+### Remediation
+The weakness can be avoided in two ways; 1)by performing pre-condition checks on any math operation or using a vetted library for arithmetic calculations such as SafeMath developed by OpenZeppelin. 2)always check and ensure that your solidity compiler version is the latest *stable* version if not the latest version

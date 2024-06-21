@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {KingOfEth,KingOfEthExploit} from "../src/DoSKingOfEth.sol";
+import {KingOfEth, KingOfEthExploit} from "../src/DoSKingOfEth.sol";
 
 contract KingOfEthExploitTest is Test {
     address private constant alice = address(1);
@@ -29,7 +29,7 @@ contract KingOfEthExploitTest is Test {
         vm.label(address(exploit), "KingOfEthExploit");
     }
 
-    function test_pwn() public {
+    function testCanhijackContract() public {
         vm.prank(attacker);
         exploit.pwn{value: 3 * 1e18}();
         assertEq(address(kingOfEth.king()), address(exploit));

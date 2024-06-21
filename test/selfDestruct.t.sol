@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {EtherGame,AttackEtherGame} from "../src/SelfDestruct.sol";
+import {EtherGame, AttackEtherGame} from "../src/SelfDestruct.sol";
 
 contract EthBankExploitTest is Test {
     address private constant alice = address(1);
@@ -29,7 +29,7 @@ contract EthBankExploitTest is Test {
         vm.label(address(exploit), "AttackEtherGame");
     }
 
-    function test_pwn() public {
+    function testCanSelfDestruct() public {
         vm.prank(attacker);
         exploit.attack{value: 10 * 1e18}();
 

@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {EthBank,EthBankExploit} from "../src/Reentrancy.sol";
+import {EthBank, EthBankExploit} from "../src/UnexpectedEthBalance.sol";
 
 contract EthBankExploitTest is Test {
     address private constant alice = address(1);
@@ -29,7 +29,7 @@ contract EthBankExploitTest is Test {
         vm.label(address(exploit), "EthBankExploit");
     }
 
-    function test_pwn() public {
+    function testReentrancy() public {
         vm.prank(attacker);
         exploit.pwn{value: 1e18}();
         assertEq(address(bank).balance, 0);
