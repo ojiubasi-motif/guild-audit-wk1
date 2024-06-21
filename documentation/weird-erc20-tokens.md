@@ -800,4 +800,268 @@ contract ERC20 is Math {
 }
 ```
 # Revert on Transfer to the Zero Address
-## 
+## example protocol
+```openZeppelin``` reverts when attempting to transfer to address(0)
+## Proof of Code
+```
+// Copyright (C) 2020 d-xo
+// SPDX-License-Identifier: AGPL-3.0-only
+
+pragma solidity >=0.6.12;
+
+import {ERC20} from "./ERC20.sol";
+
+contract RevertToZeroToken is ERC20 {
+    // --- Init ---
+    constructor(uint _totalSupply) ERC20(_totalSupply) public {}
+
+    // --- Token ---
+    function transferFrom(address src, address dst, uint wad) override public returns (bool) {
+        require(dst != address(0), "transfer-to-zero");
+        return super.transferFrom(src, dst, wad);
+    }
+}
+```
+# No Revert on Failure
+## example tokens
+```ZRX```, ```EURS```
+## Proof of Code
+```
+// Copyright (C) 2017, 2018, 2019, 2020 dbrock, rain, mrchico, d-xo
+// SPDX-License-Identifier: AGPL-3.0-only
+
+pragma solidity >=0.6.12;
+
+contract NoRevertToken {
+    // --- ERC20 Data ---
+    string  public constant name = "Token";
+    string  public constant symbol = "TKN";
+    uint8   public decimals = 18;
+    uint256 public totalSupply;
+
+    mapping (address => uint)                      public balanceOf;
+    mapping (address => mapping (address => uint)) public allowance;
+
+    event Approval(address indexed src, address indexed guy, uint wad);
+    event Transfer(address indexed src, address indexed dst, uint wad);
+
+    // --- Init ---
+    constructor(uint _totalSupply) public {
+        totalSupply = _totalSupply;
+        balanceOf[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
+
+    // --- Token ---
+    function transfer(address dst, uint wad) external returns (bool) {
+        return transferFrom(msg.sender, dst, wad);
+    }
+    function transferFrom(address src, address dst, uint wad) virtual public returns (bool) {
+        if (balanceOf[src] < wad) return false;                        // insufficient src bal
+        if (balanceOf[dst] >= (type(uint256).max - wad)) return false; // dst bal too high
+
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint).max) {
+            if (allowance[src][msg.sender] < wad) return false;        // insufficient allowance
+            allowance[src][msg.sender] = allowance[src][msg.sender] - wad;
+        }
+
+        balanceOf[src] = balanceOf[src] - wad;
+        balanceOf[dst] = balanceOf[dst] + wad;
+
+        emit Transfer(src, dst, wad);
+        return true;
+    }
+    function approve(address usr, uint wad) virtual external returns (bool) {
+        allowance[msg.sender][usr] = wad;
+        emit Approval(msg.sender, usr, wad);
+        return true;
+    }
+}
+```
+
+# Revert on Large Approvals & Transfers
+## example tokens
+```UNI```, ```COMP```
+## Proof of Code
+```
+// Copyright (C) 2017, 2018, 2019, 2020 dbrock, rain, mrchico, d-xo
+// SPDX-License-Identifier: AGPL-3.0-only
+
+pragma solidity >=0.6.12;
+
+contract Uint96ERC20 {
+    // --- ERC20 Data ---
+    string  public constant name = "Token";
+    string  public constant symbol = "TKN";
+    uint8   public decimals = 18;
+    uint96  internal supply;
+
+    mapping (address => uint96)                      internal balances;
+    mapping (address => mapping (address => uint96)) internal allowances;
+
+    event Approval(address indexed src, address indexed guy, uint wad);
+    event Transfer(address indexed src, address indexed dst, uint wad);
+
+    // --- Math ---
+    function add(uint96 x, uint96 y) internal pure returns (uint96 z) {
+        require((z = x + y) >= x);
+    }
+    function sub(uint96 x, uint96 y) internal pure returns (uint96 z) {
+        require((z = x - y) <= x);
+    }
+    function safe96(uint256 n) internal pure returns (uint96) {
+        require(n < 2**96);
+        return uint96(n);
+    }
+
+    // --- Init ---
+    constructor(uint96 _supply) public {
+        supply = _supply;
+        balances[msg.sender] = _supply;
+        emit Transfer(address(0), msg.sender, _supply);
+    }
+
+    // --- Getters ---
+    function totalSupply() external view returns (uint) {
+        return supply;
+    }
+    function balanceOf(address usr) external view returns (uint) {
+        return balances[usr];
+    }
+    function allowance(address src, address dst) external view returns (uint) {
+        return allowances[src][dst];
+    }
+
+    // --- Token ---
+    function transfer(address dst, uint wad) virtual public returns (bool) {
+        return transferFrom(msg.sender, dst, wad);
+    }
+    function transferFrom(address src, address dst, uint wad) virtual public returns (bool) {
+        uint96 amt = safe96(wad);
+
+        if (src != msg.sender && allowances[src][msg.sender] != type(uint96).max) {
+            allowances[src][msg.sender] = sub(allowances[src][msg.sender], amt);
+        }
+
+        balances[src] = sub(balances[src], amt);
+        balances[dst] = add(balances[dst], amt);
+        emit Transfer(src, dst, wad);
+        return true;
+    }
+    function approve(address usr, uint wad) virtual public returns (bool) {
+        uint96 amt;
+        if (wad == type(uint).max) {
+            amt = type(uint96).max;
+        } else {
+            amt = safe96(wad);
+        }
+
+        allowances[msg.sender][usr] = amt;
+
+        emit Approval(msg.sender, usr, amt);
+        return true;
+    }
+}
+```
+# Code Injection Via Token Name
+## Proof
+[reference](https://hackernoon.com/how-one-hacker-stole-thousands-of-dollars-worth-of-cryptocurrency-with-a-classic-code-injection-a3aba5d2bff0)
+
+# Unusual Permit Function
+## example token
+```DAI```, ```RAI```, ```GLM```, ```STAKE```, ```CHAI```, ```HAKKA```, ```USDFL```, ```HNY```
+## Proof of Code
+```
+// Copyright (C) 2017, 2018, 2019, 2020 dbrock, rain, mrchico, d-xo
+// SPDX-License-Identifier: AGPL-3.0-only
+
+pragma solidity >=0.6.12;
+
+contract Math {
+    // --- Math ---
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x);
+    }
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x);
+    }
+}
+
+contract DaiPermit is Math {
+    // --- ERC20 Data ---
+    string  public constant name = "Token";
+    string  public constant symbol = "TKN";
+    uint8   public decimals = 18;
+    uint256 public totalSupply;
+	bytes32 public constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
+	bytes32 public immutable DOMAIN_SEPARATOR = keccak256(
+        abi.encode(
+            keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+            keccak256(bytes(name)),
+            keccak256(bytes('1')),
+            block.chainid,
+            address(this)
+        )
+    );
+
+    mapping (address => uint)                      public balanceOf;
+    mapping (address => mapping (address => uint)) public allowance;
+    mapping (address => uint)                      public nonces;
+
+    event Approval(address indexed src, address indexed guy, uint wad);
+    event Transfer(address indexed src, address indexed dst, uint wad);
+
+    // --- Init ---
+    constructor(uint _totalSupply) public {
+        totalSupply = _totalSupply;
+        balanceOf[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
+
+    // --- Token ---
+    function transfer(address dst, uint wad) virtual public returns (bool) {
+        return transferFrom(msg.sender, dst, wad);
+    }
+    function transferFrom(address src, address dst, uint wad) virtual public returns (bool) {
+        require(balanceOf[src] >= wad, "insufficient-balance");
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint).max) {
+            require(allowance[src][msg.sender] >= wad, "insufficient-allowance");
+            allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
+        }
+        balanceOf[src] = sub(balanceOf[src], wad);
+        balanceOf[dst] = add(balanceOf[dst], wad);
+        emit Transfer(src, dst, wad);
+        return true;
+    }
+    function approve(address usr, uint wad) virtual public returns (bool) {
+        allowance[msg.sender][usr] = wad;
+        emit Approval(msg.sender, usr, wad);
+        return true;
+    }
+	function permit(address holder, address spender, uint256 nonce, uint256 expiry,
+                    bool allowed, uint8 v, bytes32 r, bytes32 s) external
+    {
+        bytes32 digest =
+            keccak256(abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH,
+                                     holder,
+                                     spender,
+                                     nonce,
+                                     expiry,
+                                     allowed))
+        ));
+
+        require(holder != address(0), "Dai/invalid-address-0");
+        require(holder == ecrecover(digest, v, r, s), "Dai/invalid-permit");
+        require(expiry == 0 || block.timestamp <= expiry, "Dai/permit-expired");
+        require(nonce == nonces[holder]++, "Dai/invalid-nonce");
+        uint wad = allowed ? type(uint256).max : 0;
+        allowance[holder][spender] = wad;
+    }
+}
+```
+# Transfer of less than ```amount```
+## example tokens
+```cUSDCv3```
