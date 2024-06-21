@@ -18,6 +18,7 @@
 - [Use of Deprecated Solidity Functions](#deprecated-fns)
 - [Hiding Malicious code in external contract](#external-contract)
 - [Account Existence Check for low level calls](#exist-check)
+- [Arithmetic Over/Under Flows](#overflow-underflow)
 
 ## <font color="yellow">Typographical Error <a id="typography"></a></font>
 
@@ -434,3 +435,11 @@ always use updated functions and methods in building your contracts. examples of
 
 ## Remediation
 Check before any low-level call that the address actually exists, for example before the low level call in the callERC20 function you can check that the address is a contract by checking its code size.
+
+## <font color="yellow">Arithmetic Over/Under Flows<a id="overflow-underflow"></a></font>
+
+### Description
+*An overflow/underflow happens when an arithmetic operation reaches the maximum or minimum size of a type. For instance if a number is stored in the uint8 type, it means that the number is stored in a 8 bits unsigned number ranging from 0 to 2^8-1. In computer programming, an integer overflow occurs when an arithmetic operation attempts to create a numeric value that is outside of the range that can be represented with a given number of bits – either larger than the maximum or lower than the minimum representable value.*
+
+## Remediation
+It is recommended to use vetted safe math libraries for arithmetic operations consistently throughout the smart contract system.
